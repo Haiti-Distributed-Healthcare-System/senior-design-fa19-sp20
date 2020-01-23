@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Author: "abpwrs"
+# Date: 20190521
+
+# script:
+standup_file=$(date +%Y%m%d)_standup.md
+proj_name=$(basename $(pwd))
+proj_contributors_file=".temp_contributors_file_$(date +%Y%m%d)"
+proj_contributors=$(git log --pretty="%an" | sort | uniq)
+days_considered=1
+
+if [[ $# -eq 1 ]]; then
+  days_considered=$1
+fi
+
+# create the outline for the meeting
+cat >$standup_file <<EOF
+# ${proj_name} Standup
+Date: $(date '+%A %B %d, %Y')
+Attendees:
+${proj_contributors}
+
+## Minutes:
+
+
+## TODOs:
+${proj_contributors}
+
+
+## Git Standup Log:
+
+EOF
+
+# create the git standup log
+git log --pretty="%an" | sort | uniq >$proj_contributors_file
+while read contributor; do
+  echo $contributor
+  cat >>$standup_file <<EOF
+#### ${contributor}
+$(git standup -a "$contributor" -d ${days_considered})
+
+EOF
+done <$proj_contributors_file
+
+sed -i.backup 's/$/    /' $standup_file
+sed -i.backup 's/\\n//g' $standup_file
+grep -v "$(pwd)" $standup_file >/tmp/my-standup-save
+mv /tmp/my-standup-save $standup_file
+rm $proj_contributors_file
+rm $standup_file.backup
